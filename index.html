@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>EmulatorJS</title>
+
+        <link rel = icon href = docs/favicon.ico sizes = "16x16 32x32 48x48 64x64" type = image/vnd.microsoft.icon>
+        <meta name = viewport content = "width = device-width, initial-scale = 1">
+        <meta lang="zh_CN">
+        <meta charset="UTF-8">
+
+        <style>
+            body, html {
+                height: 100%;
+            }
+
+            body {
+                font-family: monospace;
+                font-weight: bold;
+                font-size: 20px;
+                margin: 0;
+                overflow: hidden;
+                background-color: #222;
+                cursor: pointer;
+            }
+
+            body, .box {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            body {
+              flex-direction: column;
+            }
+
+            .box {
+                color: #aaa;
+                height: 2em;
+                width: 13em;
+                max-width: 80%;
+                max-height: 80%;
+                background-color: #333;
+                border-radius: 0.4em;
+                border: 2px solid #555;
+                position: relative;
+                flex-direction: column;
+                transition-duration: 0.2s;
+                overflow: hidden;
+                margin-bottom: 1em;
+            }
+
+            .box:hover, .box[drag] {
+                border-color: #38f;
+                color: #ddd
+            }
+
+            #upload {
+              height: 8em;
+            }
+
+            #input {
+                cursor: pointer;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                opacity: 0
+            }
+
+            #display {
+                width: 100%;
+                height: 100%
+            }
+
+            select, button {
+                padding: 0.6em 0.4em;
+                margin: 0.5em;
+                width: 15em;
+                max-width: 100%;
+                font-family: monospace;
+                font-weight: bold;
+                font-size: 16px;
+                background-color: #444;
+                color: #aaa;
+                border-radius: 0.4em;
+                border: 1px solid #555;
+                cursor: pointer;
+                transition-duration: 0.2s
+            }
+
+            select:hover, button:hover {
+                background-color: #666;
+                color: #ddd
+            }
+
+            a {
+                text-decoration: none;
+                color: #aaa;
+            }
+        </style>
+        <script>
+          var _hmt = _hmt || [];
+          (function() {
+            var hm = document.createElement("script");
+            hm.src = "https://hm.baidu.com/hm.js?45acc9824a216a8f1792b419eb91f090";
+            var s = document.getElementsByTagName("script")[0];
+            s.parentNode.insertBefore(hm, s);
+          })();
+        </script>
+    </head>
+
+    <body>
+        <div id="upload" class="box">
+            <input type = file id = input>
+            拖拽ROM文件或点击这里
+        </div>
+
+        <div class="box">
+            <a href="//debuggerx.com/sdlpal/sdlpal.html">SDL-仙剑奇侠传98</a>
+        </div>
+
+        <div id="game1" class="box">
+            SFC-勇者斗恶龙3
+        </div>
+
+        <div id="game2" class="box">
+            GBA-光金太阳2
+        </div>
+
+        <div id="game3" class="box">
+            PSX-超兄贵
+        </div>
+
+        <div id="game4" class="box">
+            GBA-V拉力3
+        </div>
+
+
+        <script src="data/storage.js"></script>
+        <script>
+            let romStorage;
+            const startGame = (name, url, core) => {
+                console.info(`start ${core} game [${name}]`);
+                const div = document.createElement("div")
+                const sub = document.createElement("div")
+                const script = document.createElement("script")
+
+                sub.id = "game"
+                div.id = "display"
+
+                document.querySelectorAll('.box').forEach((box) => {
+                    box.remove();
+                });
+                div.appendChild(sub)
+                document.body.appendChild(div)
+
+                window.EJS_language = 'zh-CN'
+                window.EJS_player = "#game";
+                window.EJS_gameName = name;
+                window.EJS_biosUrl = "";
+                window.EJS_gameUrl = url;
+                window.EJS_core = core;
+                window.EJS_pathtodata = "data/";
+                window.EJS_startOnLoaded = true;
+
+                script.src = "data/loader.js";
+                document.body.appendChild(script);
+            }
+
+            input.onchange = async () => {
+                const url = new Blob([input.files[0]])
+                const parts = input.files[0].name.split(".")
+
+                const core = await (async (ext) => {
+                    if (["fds", "nes", "unif", "unf"].includes(ext))
+                        return "nes"
+
+                    if (["smc", "fig", "sfc", "gd3", "gd7", "dx2", "bsx", "swc"].includes(ext))
+                        return "snes"
+
+                    if (["z64", "n64"].includes(ext))
+                        return "n64"
+
+                    if (["pce"].includes(ext))
+                        return "pce"
+
+                    if (["ngp", "ngc"].includes(ext))
+                        return "ngp"
+
+                    if (["ws", "wsc"].includes(ext))
+                        return "ws"
+
+                    if (["col", "cv"].includes(ext))
+                        return "coleco"
+
+                    if (["d64"].includes(ext))
+                        return "vice_x64"
+
+                    if (["nds", "gba", "gb", "z64", "n64"].includes(ext))
+                        return ext
+
+                    return await new Promise(resolve => {
+                        const cores = {
+                            "Nintendo 64": "n64",
+                            "Nintendo Game Boy": "gb",
+                            "Nintendo Game Boy Advance": "gba",
+                            "Nintendo DS": "nds",
+                            "Nintendo Entertainment System": "nes",
+                            "Super Nintendo Entertainment System": "snes",
+                            "PlayStation": "psx",
+                            "Virtual Boy": "vb",
+                            "Sega Mega Drive": "segaMD",
+                            "Sega Master System": "segaMS",
+                            "Sega CD": "segaCD",
+                            "Atari Lynx": "lynx",
+                            "Sega 32X": "sega32x",
+                            "Atari Jaguar": "jaguar",
+                            "Sega Game Gear": "segaGG",
+                            "Sega Saturn": "segaSaturn",
+                            "Atari 7800": "atari7800",
+                            "Atari 2600": "atari2600",
+                            "NEC TurboGrafx-16/SuperGrafx/PC Engine": "pce",
+                            "NEC PC-FX": "pcfx",
+                            "SNK NeoGeo Pocket (Color)": "ngp",
+                            "Bandai WonderSwan (Color)": "ws",
+                            "ColecoVision": "coleco",
+                            "Commodore 64": "vice_x64"
+                        }
+
+                        const button = document.createElement("button")
+                        const select = document.createElement("select")
+
+                        for (const type in cores) {
+                            const option = document.createElement("option")
+
+                            option.value = cores[type]
+                            option.textContent = type
+                            select.appendChild(option)
+                        }
+
+                        button.onclick = () => resolve(select[select.selectedIndex].value)
+                        button.textContent = "Load game"
+                        upload.innerHTML = ""
+
+                        upload.appendChild(select)
+                        upload.appendChild(button)
+                    })
+                })(parts.pop())
+
+                startGame(parts.shift(), url, core);
+            }
+            upload.ondragover = () => box.setAttribute("drag", true);
+            upload.ondragleave = () => box.removeAttribute("drag");
+
+            [
+                ['game1', 'roms/dq3.zip', 'snes', 2458430],
+                ['game2', 'roms/GoldenSun2.zip', 'gba', 13135147],
+                ['game3', 'roms/ChoAniki.zip', 'psx', 216368945],
+                ['game4', 'roms/VRally3.zip', 'gba', 2608602],
+            ].forEach((gameInfo) => {
+                const ele = document.querySelector(`#${gameInfo[0]}`);
+                ele.onclick = async () => {
+                    if (!romStorage) {
+                        romStorage = new window.EJS_STORAGE("EmulatorJS-roms", "rom");
+                    }
+
+                    const rom = await romStorage.get(gameInfo[1]);
+                    if (!!rom && rom.byteLength === gameInfo[3]) {
+                        return startGame(gameInfo[1].split('/').pop().split('.').shift(), rom, gameInfo[2]);
+                    }
+
+                    ele.innerText = '游戏加载中……';
+                    fetch(gameInfo[1]).then(async (resp) => {
+                        const reader = resp.body.getReader();
+                        let gameData = [];
+                        let downloadedSize = 0;
+                        while(true) {
+                            const { done, value } = await reader.read();
+                            if (done) {
+                                break;
+                            }
+                            gameData.push(value);
+                            downloadedSize += value.length;
+                            ele.innerText = `游戏加载中……(${(downloadedSize * 100 / gameInfo[3]).toFixed(1)}%)`;
+                        }
+                        const data = new Uint8Array(await (new Blob(gameData)).arrayBuffer());
+                        romStorage.put(gameInfo[1], data);
+                        startGame(gameInfo[1].split('/').pop().split('.').shift(), data, gameInfo[2]);
+                    });
+                    document.querySelectorAll('.box').forEach((ele) => {
+                        ele.onclick = () => {
+                            alert('游戏加载中，请勿重复点击。如果长时间加载未完成，请刷新页面后重试。');
+                        }
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>
